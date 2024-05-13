@@ -11,7 +11,7 @@ import os
 load_dotenv()
 
 resource = Resource(attributes={
-    SERVICE_NAME: "Axiom-Otel-Prototype"
+    SERVICE_NAME: "APIContext-OpenTelemetry-Prototype"
 })
 
 provider = TracerProvider(resource=resource)
