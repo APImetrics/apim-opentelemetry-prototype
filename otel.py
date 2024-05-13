@@ -10,31 +10,29 @@ import os
 
 load_dotenv()
 
-# Define the service name resource for the tracer.
 resource = Resource(attributes={
     SERVICE_NAME: "Axiom-Otel-Prototype"
 })
 
-# Create a TracerProvider with the defined resource for creating tracers.
 provider = TracerProvider(resource=resource)
 
-# Configure the OTLP/HTTP Span Exporter with Axiom headers and endpoint. Replace `API_TOKEN` with your Axiom API key, and replace `DATASET_NAME` with the name of the Axiom dataset where you want to send data.
+otel_headers = { "Authorization": f"Bearer {os.environ['OTEL_API_TOKEN']}" }
+for h in os.environ["OTEL_HEADERS"].split(","):
+    if "=" in h:
+        k,v = h.split("=")
+        if k and v:
+            otel_headers[k] = v
+
 otlp_exporter = OTLPSpanExporter(
-    endpoint="https://api.axiom.co/v1/traces",
-    headers={
-        "Authorization": f"Bearer {os.environ['AXIOM_API_TOKEN']}",
-        "X-Axiom-Dataset": "exploring-axiom"
-    }
+    endpoint=os.environ["OTEL_ENDPOINT"],
+    headers=otel_headers
 )
 
-# Create a BatchSpanProcessor with the OTLP exporter to batch and send trace spans.
 processor = BatchSpanProcessor(otlp_exporter)
 provider.add_span_processor(processor)
 
-# Set the TracerProvider as the global tracer provider.
 trace.set_tracer_provider(provider)
 
-# Define a tracer for external use in different parts of the app.
 tracer = trace.get_tracer("api_call")
 
 def instrument_call(method: str, url: str):
