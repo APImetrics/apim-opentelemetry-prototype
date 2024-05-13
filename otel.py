@@ -51,15 +51,19 @@ def instrument_call(method: str, url: str):
     download_end = download_start + randint(1_000_000, 2_000_000)
     end = download_end
 
-    call = tracer.start_span("api_call", start_time=start, attributes={"http.method": method, "http.url": url})
-    dns = tracer.start_span("dns_lookup", start_time=dns_start).end(end_time=dns_end)
-    connect = tracer.start_span("connect", start_time=connect_start).end(end_time=connect_end)
-    handshake = tracer.start_span("tls_handshake", start_time=handshake_start).end(end_time=handshake_end)
-    upload = tracer.start_span("upload", start_time=upload_start).end(end_time=upload_end)
-    processing = tracer.start_span("processing", start_time=processing_start).end(end_time=processing_end)
-    download = tracer.start_span("download", start_time=download_start).end(end_time=download_end)
-    call.end(end_time=end)
+    with tracer.start_as_current_span("api_call", start_time=start, end_on_exit=False) as call:
+        def span(name: str, start_time: int, end_time: int):
+            return tracer.start_span(name, start_time=start_time).end(end_time=end_time)
 
+        call.set_attribute("http.method", method)
+        call.set_attribute("http.url", url)
+        span("dns", dns_start, dns_end)
+        span("connect", connect_start, connect_end)
+        span("tls_handshake", handshake_start, handshake_end)
+        span("upload", upload_start, upload_end)
+        span("processing", processing_start, processing_end)
+        span("download", download_start, download_end)
+        call.end(end_time=end)
 
 if __name__ == "__main__":
     instrument_call("GET", "https://api.example.com")
