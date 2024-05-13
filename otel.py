@@ -31,10 +31,6 @@ otlp_exporter = OTLPSpanExporter(
 processor = BatchSpanProcessor(otlp_exporter)
 provider.add_span_processor(processor)
 
-trace.set_tracer_provider(provider)
-
-tracer = trace.get_tracer("api_call")
-
 def instrument_call(method: str, url: str):
     start = time_ns()
     dns_start = start
@@ -51,6 +47,7 @@ def instrument_call(method: str, url: str):
     download_end = download_start + randint(1_000_000, 2_000_000)
     end = download_end
 
+    tracer = provider.get_tracer("api_call")
     with tracer.start_as_current_span("api_call", start_time=start, end_on_exit=False) as call:
         def span(name: str, start_time: int, end_time: int):
             return tracer.start_span(name, start_time=start_time).end(end_time=end_time)
@@ -64,6 +61,7 @@ def instrument_call(method: str, url: str):
         span("processing", processing_start, processing_end)
         span("download", download_start, download_end)
         call.end(end_time=end)
+
 
 if __name__ == "__main__":
     instrument_call("GET", "https://api.example.com")
